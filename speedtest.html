@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internet Speed Checker</title>
+
+    <!-- Importing Google Font (Roboto) for better typography -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap');
+
+        /* Basic styling for the body */
+        body {
+            font-family: 'Roboto', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(45deg, #f44336, #ffeb3b, #e91e63, #00bcd4);
+            background-size: 400% 400%;
+            background-repeat: no-repeat;
+            animation: waveAnimation 80s ease-in-out infinite; /* Animation for background gradient */
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+        }
+
+        /* Keyframes for background wave animation */
+        @keyframes waveAnimation {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            25% {
+                background-position: 50% 0%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            75% {
+                background-position: 50% 100%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        /* Styling for the main container */
+        .container {
+            background: #ffffff;
+            color: #333;
+            width: 90%;
+            max-width: 500px;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+            text-align: center;
+        }
+
+        /* Heading styling */
+        .container h1 {
+            margin-bottom: 20px;
+            font-weight: 700;
+            font-size: 24px;
+        }
+
+        /* Button styling */
+        .btn {
+            padding: 12px 25px;
+            font-size: 16px;
+            font-weight: 500;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            color: #fff;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: transform 0.3s, background-color 0.3s;
+        }
+
+        /* Hover effect for the button */
+        .btn:hover {
+            transform: scale(1.05);
+        }
+
+        /* Styling for the progress bar */
+        .progress {
+            display: none;
+            width: 100%;
+            height: 10px;
+            background: #eee;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        /* Progress bar inner styling */
+        .progress-bar {
+            height: 10px;
+            background: linear-gradient(135deg, #6a11cb, #2575fc);
+            width: 0;
+            transition: width 0.2s ease;
+        }
+
+        /* Result box styling */
+        .result {
+            display: none;
+            margin-top: 20px;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Metric styling */
+        .metric {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        /* Styling for the metric values */
+        .metric span {
+            font-weight: bold;
+            font-size: 22px;
+            color: #2575fc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Main container for the content -->
+    <div class="container">
+        <h1>What's Your Internet Speed?</h1>
+        <button class="btn" onclick="checkSpeed()">Check Now</button>
+        <!-- Progress bar that appears during the speed test -->
+        <div class="progress" id="progress">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+
+        <!-- Result display that shows after the speed test is complete -->
+        <div class="result" id="result">
+            <div class="metric">Download Speed (Avg): <span id="downloadAvg">0</span> Mbps</div>
+            <div class="metric">Download Speed (Max): <span id="downloadMax">0</span> Mbps</div>
+            <div class="metric">Upload Speed (Avg): <span id="uploadAvg">0</span> Mbps</div>
+            <div class="metric">Upload Speed (Max): <span id="uploadMax">0</span> Mbps</div>
+        </div>
+    </div>
+
+    <!-- Link to the GitHub profile of the developer (fixed at bottom-right) -->
+    <a href="https://github.com/himalayanyogi" target="_blank" style="position: fixed; bottom: 10px; right: 10px; font-size: 16px; color: #000; text-decoration: none; background-color: #fff; padding: 5px 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);">
+        GitHub: himalayanyogi
+    </a>
+
+    <!-- Importing the confetti library for visual effect -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        // Function to check internet speed
+        async function checkSpeed() {
+            const resultElement = document.getElementById('result');
+            const progressElement = document.getElementById('progress');
+            const progressBarElement = document.getElementById('progress-bar');
+            const downloadAvgElement = document.getElementById('downloadAvg');
+            const downloadMaxElement = document.getElementById('downloadMax');
+            const uploadAvgElement = document.getElementById('uploadAvg');
+            const uploadMaxElement = document.getElementById('uploadMax');
+
+            // Hide result and show progress bar initially
+            resultElement.style.display = "none";
+            progressElement.style.display = "block";
+            progressBarElement.style.width = "0%";
+
+            // Parameters for the speed test
+            const testDuration = 5000; // Duration of the test in milliseconds
+            const fileSizeInBits = 34121 * 8; // Size of the test file in bits (34121 bytes)
+            let downloadSpeeds = []; // Array to store download speeds
+            let uploadSpeeds = []; // Array to store upload speeds
+
+            // Function to update the progress bar
+            const updateProgress = (progress) => {
+                progressBarElement.style.width = `${progress}%`;
+            };
+
+            // Function to start download or upload speed test
+            const startTest = async (type) => {
+                const startTime = new Date().getTime();
+                if (type === "download") {
+                    await fetch("https://upload.wikimedia.org/wikipedia/commons/4/47/PNG_transparency_demonstration_1.png?nocache=" + Math.random());
+                } else {
+                    await fetch("https://httpbin.org/post", { method: "POST", body: new Blob([new Uint8Array(50000)]) });
+                }
+                const endTime = new Date().getTime();
+                const durationInSeconds = (endTime - startTime) / 1000;
+                const speedInBps = fileSizeInBits / durationInSeconds;
+                return (speedInBps / (1024 * 1024)).toFixed(2); // Convert to Mbps
+            };
+
+            // Loop to test the speed multiple times
+            const testLoop = async (type, speedArray) => {
+                const endTime = new Date().getTime() + testDuration;
+                let count = 0;
+                while (new Date().getTime() < endTime) {
+                    const speed = await startTest(type);
+                    speedArray.push(parseFloat(speed)); // Store the speed
+                    count++;
+                    updateProgress((count / 10) * 100); // Update progress bar as the test runs
+                }
+            };
+
+            // Run both download and upload speed tests concurrently
+            await Promise.all([
+                testLoop("download", downloadSpeeds),
+                testLoop("upload", uploadSpeeds),
+            ]);
+
+            // Function to calculate the average and max speeds
+            const calculateMetrics = (speeds) => {
+                const avg = (speeds.reduce((a, b) => a + b, 0) / speeds.length).toFixed(2);
+                const max = Math.max(...speeds).toFixed(2);
+                return { avg, max };
+            };
+
+            // Calculate the metrics for both download and upload speeds
+            const downloadMetrics = calculateMetrics(downloadSpeeds);
+            const uploadMetrics = calculateMetrics(uploadSpeeds);
+
+            // Hide progress bar and show result
+            progressElement.style.display = "none";
+            resultElement.style.display = "block";
+
+            // Display the results
+            downloadAvgElement.innerText = downloadMetrics.avg;
+            downloadMaxElement.innerText = downloadMetrics.max;
+            uploadAvgElement.innerText = uploadMetrics.avg;
+            uploadMaxElement.innerText = uploadMetrics.max;
+
+            // Trigger confetti effects at the bottom-left and bottom-right
+            confetti({
+                particleCount: 200,
+                spread: 200,
+                origin: { x: 0.4, y: 0.4 },
+                colors: ['#ff0', '#ff00ff', '#00ff00', '#00ffff', '#ff0000']
+            });
+
+            confetti({
+                particleCount: 200,
+                spread: 200,
+                origin: { x: 0.6, y: 0.6 },
+                colors: ['#ff0', '#ff00ff', '#00ff00', '#00ffff', '#ff0000']
+            });
+        }
+    </script>
+</body>
+
+</html>
